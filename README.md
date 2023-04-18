@@ -1,5 +1,6 @@
 # Host_of_Troubls_Server
 
++ 返回请求的 Host 以及 body 内容。
 + 本地使用方法: python Server.py <-m M> <-f F> <-o O> <-s S> <-a A> <-p P>
 + 参数解释：
   + -m: 多 Host 头处理原则
@@ -24,3 +25,4 @@
   + -p: 同时有 host 头和 URL 的选择
     + P = 0: Absolute-URL （默认值）
     + P = 1: Host header
+
