@@ -104,11 +104,14 @@ def request_handler(new_client_socket):
     if status_code == 400:
         response_line = "HTTP/1.1 400 Bad Request\r\n"
     
-    response_headers = ["Server: Python20WS/2.1\r\n",
-                        "content-type: "
-                        "cache-control:max-age=1000\r\n"]
+    response_headers = ["server: Apache Tomcat/5.0.12\r\n",
+                        "content-type: text/css\r\n",
+                        "cache-control: public, max-age=7200\r\n"]
     response_blank = "\r\n"
-    response_body = "host is " + host + " and number is " + request_body
+    f = open('style.css', 'r')
+    response_body = f.read()
+    f.close()
+    # response_body = "host is " + host + " and number is " + request_body
     if status_code == 400:
         response_body = ""
 
