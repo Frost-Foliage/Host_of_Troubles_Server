@@ -1,6 +1,7 @@
 import socket
 import re
 import argparse
+import json
 
 # 0: Reject; 1: Prefer first; 2: Prefer last
 multiple_host = 1
@@ -27,11 +28,11 @@ def request_handler(new_client_socket):
 
     request_data = new_client_socket.recv(1024).decode()
     print(request_data)
-    request_body = request_data.splitlines()[-1]
+    request_body = request_data.splitlines(True)[-1]
 
     # host step0: collect potential headers
-    request_line = request_data.splitlines()[0]
-    request_headers = request_data.splitlines()[1:-2]
+    request_line = request_data.splitlines(True)[0]
+    request_headers = request_data.splitlines(True)[1:-2]
     first_header = request_headers[0]
     other_headers = request_headers[1:]
 
@@ -106,12 +107,15 @@ def request_handler(new_client_socket):
     
     response_headers = ["server: Apache Tomcat/5.0.12\r\n",
                         "content-type: text/css\r\n",
-                        "cache-control: public, max-age=7200\r\n"]
+                        "cache-control: public, max-age=1000\r\n"]
     response_blank = "\r\n"
-    f = open('style.css', 'r')
-    response_body = f.read()
-    f.close()
-    # response_body = "host is " + host + " and number is " + request_body
+    response_body = ""
+    print(request_body)    
+    try:
+        request_dict = json.loads(json.loads(request_body))
+        response_body = request_dict["number"]
+    except:
+        response_body = ""
     if status_code == 400:
         response_body = ""
 
