@@ -27,10 +27,10 @@
 
 + Consistency：发送 absolute-URI 为 http://hostA，唯一 host 头为 host: hostB 的请求。
   + 若收到响应为 400，则记录为 Must。
-  + 若收到响应为 200，则记录为 Optional，并进行 Preference 的测试。
-+ Preference：用请求去触发 Consistency 测试请求的缓存。
-  + 发送 absolute-URI 为 http://hostA，唯一 host 头为 host: hostA 的请求，若触发缓存则记录为 Absolute-URI。
-  + 发送 absolute-URI 为 http://hostB，唯一 host 头为 host: hostB 的请求，若触发缓存则记录为 Host header。
+  + 若收到响应为 200，则记录为 Optional，并额外进行 Preference 的记录。
++ Preference：根据服务器响应进行记录。
+  + 若服务器收到的请求为 hostA，则记录为 Absolute-URI。
+  + 若服务器收到的请求为 hostB，则记录为 Host header。
 
 ### Multiple Host headers
 
@@ -42,18 +42,15 @@
     + 若收到响应为 400，则发送 absolute-URI 为 http://hostA, hostB，host 头为 host: hostA 和 host: hostB 的请求。
       + 若收到响应为 200，则记录为 Concenate。
       + 若收到响应为 400，则记录为 Reject。
-
 + 若 presence of Absolute-URI 为 Must，且 Preference 为 Absolute-URI，则跳过。
-
 + 若 presence of Absolute-URI 为 Must，且 Preference 为 Host header，则发送 absolute-URI 为 http://hostC，带有 host: hostA 和 host: hostB 的多 host 头请求。
 
   + 若收到响应为 400，则记录为 Reject。
-
-  + 若收到响应为 200，则继续测试：
-    + 发送请求 hostA 的请求，若触发缓存则记录为 Prefer first。
-    + 发送请求 hostB 的请求，若触发缓存则记录为 Prefer last。
-    + 发送请求 hostA, hostB 的请求，若触发缓存则记录为 Concatenate。
-    + 发送请求 hostC 的请求，若触发缓存则记录为 Use absolute-URI。
+  + 若收到响应为 200，则根据服务器响应进行记录：
+    + 若服务器收到的请求为 hostA，则记录为 Prefer first。
+    + 若服务器收到的请求为 hostB，则记录为 Prefer last。
+    + 若服务器收到的请求为 hostC，则记录为 Use absolute-URI。
+    + 若服务器收到的请求为 hostA, hostB，则记录为 Concatenate。
 
 ### Space-preceded Host as first header
 
@@ -71,9 +68,9 @@
       + 若收到响应为 200，则记录为 Not recognize。
   + 若 presence of Host header 为 Optional，则发送一个 absolute-URI 为 hostB，第一个头为 host: hostA （前带空格），无其他 host 头的请求。
     + 若收到响应为 400，则记录为 Reject。
-    + 若收到响应为 200，则继续测试：
-      + 发送请求 hostA 的请求，若触发缓存则记录为 Recognize。
-      + 发送请求 hostB 的请求，若触发缓存则记录为 Not recognize。
+    + 若收到响应为 200，则根据服务器响应进行记录：
+      + 若服务器收到的请求为 hostA，则记录为 Recognize。
+      + 若服务器收到的请求为 hostB，则记录为 Not recognize。
 
 ### Other space-preceded Host header
 
@@ -90,18 +87,16 @@
     + 若收到响应为 200，则记录为 Recognize。
     + 若收到响应为 400，则发送第一个头为 host: hostA，第二个头为 host: hostB（前带空格），无其他 host 头的请求。
       + 若收到响应为 400，则记录为 Reject。
-      + 若收到响应为 200，则继续测试：
-        + 发送请求 hostA 的请求，若触发缓存则记录为 Not recognize。
-        + 发送请求 hostAhost:hostB 的请求，若触发缓存则记录为 Line folding。
-
+      + 若收到响应为 200，则根据服务器响应进行记录：
+        + 若服务器收到的请求为 hostA，则记录为 Not recognize。
+        + 若服务器收到的请求为 hostAhost: hostB，则记录为 Line folding。
   + 若 presence of Host header 为 Optional，则发送发送一个 absolute-URI 为 hostB，第二个头为 host: hostA （前带空格），无其他 host 头的请求。
     + 若收到响应为 400，则记录为 Reject。
-    + 若收到响应为 200，则继续测试：
-      + 发送请求 hostA 的请求，若触发缓存则记录为 Recognize。
-      + 发送请求 hostB 的请求，若触发缓存则继续测试：
-        + 发送一个有无关的 absolute-URI，第二个头为 host: hostA，第三个头为 host: hostB（前带空格），无其他 host 头的请求。
-        + 发送请求 hostA 的请求，若触发缓存则记录为 Not recognize。
-        + 发送请求 hostAhost:hostB 的请求，若触发缓存则记录为 Line folding。
+    + 若收到响应为 200，则根据服务器响应进行记录：
+      + 若服务器收到的请求为 hostA，则记录为 Recognize。
+      + 若服务器收到的请求为 hostB，则需要继续测试：发送一个有无关的 absolute-URI，第二个头为 host: hostA，第三个头为 host: hostB（前带空格），无其他 host 头的请求。根据服务器响应进行记录：
+        + 若服务器收到的请求为 hostA，则记录为 Not recognize。
+        + 若服务器收到的请求为 hostAhost: hostB，则记录为 Line folding。
 
 ### Space-succeeded Host header
 
@@ -127,14 +122,13 @@
 + 若 presence of Host header 为 Must，且 Preference 为 Absolute-URI，则请求方式如下：
   + 发送绝对 URI 为 https://hostA，host 头为 host: hostB 的请求。
     + 若收到响应为 400，则记录为 Recognize HTTP, reject others。
-    + 若收到响应为 200，则继续测试：
-      + 发送请求 hostB 的请求，若触发缓存则记录为 Recognize HTTP, not others。
-      + 发送请求 hostA 的请求，若触发缓存则继续测试：
-        + 发送绝对 URI 为 nonhttp://hostA，host 头为 host: hostB 的请求。
-          + 若收到响应为 400，则记录为 Recognize HTTP/S, reject others。
-          + 若收到响应为 200，则继续测试：
-            + 发送请求 hostB 的请求，若触发缓存则记录为 Recognize HTTP/S, not others。
-            + 发送请求 hostA 的请求，若触发缓存则记录为 Recognize any。
+    + 若收到响应为 200，则根据服务器响应进行记录：
+      + 若服务器收到的请求为 hostB，则记录为 Recognize HTTP, not others。
+      + 若服务器收到的请求为 hostA，则继续测试：发送绝对 URI 为 nonhttp://hostA，host 头为 host: hostB 的请求。
+        + 若收到响应为 400，则记录为 Recognize HTTP/S, reject others。
+        + 若收到响应为 200，则根据服务器响应进行记录：
+          + 若服务器收到的请求为 hostB，则记录为 Recognize HTTP/S, not others。
+          + 若服务器收到的请求为 hostA，则记录为 Recognize any。
 + 若 presence of Host header 为 Optional，则请求方式如下：
   + 发送绝对 URI 为 HTTPS ，无 host 头的请求。
     + 若收到响应为 400，则继续测试，为原请求增加 host 头。
