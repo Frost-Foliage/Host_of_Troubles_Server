@@ -6,7 +6,7 @@
 
 ### 确认存在缓存
 
-+ 以 absolute-URI 为 http://hostT，唯一 host 头为 host: hostT 的请求连续请求 hostT，每次请求携带请求编号。
++ 以 absolute-URI 为 http://waf1，唯一 host 头为 host: waf1 的请求连续请求 waf1，每次请求携带请求编号。
 + 若后续请求未引发服务器输出，获得的编号为之前的请求所携带的编号，则存在缓存，对其行为进行测试。
 
 ### Presence of host
@@ -25,21 +25,21 @@
 
 ### Recognized absolute-URI vs. Recognized Host header
 
-+ Consistency：发送 absolute-URI 为 http://hostA，唯一 host 头为 host: hostB 的请求。
++ Consistency：发送 absolute-URI 为 http://waf1，唯一 host 头为 host: waf2 的请求。
   + 若收到响应为 400，则记录为 Must。
   + 若收到响应为 200，则记录为 Optional，并额外进行 Preference 的记录。
 + Preference：根据服务器响应进行记录。
-  + 若服务器收到的请求为 hostA，则记录为 Absolute-URI。
-  + 若服务器收到的请求为 hostB，则记录为 Host header。
+  + 若服务器收到的请求为 waf1，则记录为 Absolute-URI。
+  + 若服务器收到的请求为 waf2，则记录为 Host header。
 
 ### Multiple Host headers
 
-+ 若 Consistency 为 Must，则发送 absolute-URI 为 http://hostA，host 头为 host: hostA 和 host: hostB 的请求。
++ 若 Consistency 为 Must，则发送 absolute-URI 为 http://waf1，host 头为 host: waf1 和 host: waf2 的请求。
 
   + 若收到响应为 200，则记录为 Prefer first。
-  + 若收到响应为 400，则发送 absolute-URI 为 http://hostB，host 头为 host: hostA 和 host: hostB 的请求。
+  + 若收到响应为 400，则发送 absolute-URI 为 http://waf2，host 头为 host: waf1 和 host: waf2 的请求。
     + 若收到响应为 200，则记录为 Prefer last。
-    + 若收到响应为 400，则发送 absolute-URI 为 http://hostA, hostB，host 头为 host: hostA 和 host: hostB 的请求。
+    + 若收到响应为 400，则发送 absolute-URI 为 http://waf1，host 头为 host: waf1前半段 和 host: waf1后半段 的请求。
       + 若收到响应为 200，则记录为 Concenate。
       + 若收到响应为 400，则记录为 Reject。
 + 若 presence of Absolute-URI 为 Must，且 Preference 为 Absolute-URI，则跳过。
