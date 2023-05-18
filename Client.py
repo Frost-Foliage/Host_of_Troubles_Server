@@ -2,6 +2,10 @@ import socket
 import json
 import csv
 
+host_1 = "waf1.cdnattack.shop"
+host_2 = "waf2.cdnattack.shop"
+host_3 = "waf3.cdnattack.shop"
+
 class Agency_Behaviour:
     def __init__(self):
         self.Ambiguous = ""
@@ -52,16 +56,16 @@ def cloudfare_test(IP_and_port):
 
     # step1: Cache exists
     headers = ["XNumber: 1\r\n",
-               "host: waf1.cdnattack.shop\r\n"]
+               "host: " + host_1 + "\r\n"]
     headers.extend(base_headers)
-    recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
-    recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
-    recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
+    recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
+    recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
+    recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
     headers = ["XNumber: 2\r\n",
-               "host: waf1.cdnattack.shop\r\n"]
-    recv_data2 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
-    recv_data2 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
-    recv_data2 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
+               "host: " + host_1 + "\r\n"]
+    recv_data2 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
+    recv_data2 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
+    recv_data2 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
     if recv_data2.splitlines()[-3].startswith("Ambiguous request: "):
         Ambiguous = recv_data2.splitlines()[-1][19:]
         print("Ambiguous: " + Ambiguous)
@@ -77,7 +81,7 @@ def cloudfare_test(IP_and_port):
     if Ambiguous == "":
         # step2: Presence of host
         # step2-1: Host header
-        recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", base_headers)
+        recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", base_headers)
         recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
         if recv_status1 == "400":
             Presence_host_header = "Must"
@@ -88,7 +92,7 @@ def cloudfare_test(IP_and_port):
         else:
             print("Error: Presence of host header: Wrong status code")
         # step2-2: Absolute-URI
-        headers = ["host: waf1.cdnattack.shop\r\n"]
+        headers = ["host: " + host_1 + "\r\n"]
         headers.extend(base_headers)
         recv_data1 = send_request(IP_and_port, "/style.css", headers)
         recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
@@ -102,21 +106,21 @@ def cloudfare_test(IP_and_port):
             print("Error: Presence of absolute-URI: Wrong status code")
 
         # step3: Recognized absolute-URI vs. Recognized Host header
-        headers = ["host: waf2.cdnattack.shop\r\n"]
+        headers = ["host: " + host_2 + "\r\n"]
         headers.extend(base_headers)
-        recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
-        recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
-        recv_body1 = json.loads(recv_data1.splitlines()[-3])
+        recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
+        recv_status1 = recv_data1.splitlines()[0].split(" ")[1]        
         if recv_status1 == "400":
             Consistency = "Must"
             print("Consistency: Must")
         elif recv_status1 == "200":
             Consistency = "Optional"
             print("Consistency: Optional")
-            if recv_body1["host"] == "waf1.cdnattack.shop":
+            recv_body1 = json.loads(recv_data1.splitlines()[-3])
+            if recv_body1["host"] == host_1:
                 Preference = "Absolute-URI"
                 print("Preference: Absolute-URI")
-            elif recv_body1["host"] == "waf2.cdnattack.shop":
+            elif recv_body1["host"] == host_2:
                 Preference = "Host header"
                 print("Preference: Host header")
             else:
@@ -126,16 +130,16 @@ def cloudfare_test(IP_and_port):
 
         # step4: Multiple Host headers
         if Consistency == "Must":
-            headers = ["host: waf1.cdnattack.shop\r\n",
-                    "host: waf2.cdnattack.shop\r\n"]
+            headers = ["host: " + host_1 + "\r\n",
+                       "host: " + host_2 + "\r\n"]
             headers.extend(base_headers)
-            recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
+            recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
             recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
             if recv_status1 == "200":
                 Multiple_host_headers = "Prefer first"
                 print("Multiple Host headers: Prefer first")
             elif recv_status1 == "400":
-                recv_data2 = send_request(IP_and_port, "http://waf2.cdnattack.shop/style.css", headers)
+                recv_data2 = send_request(IP_and_port, "http://" + host_2 + "/style.css", headers)
                 recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                 if recv_status2 == "200":
                     Multiple_host_headers = "Prefer last"
@@ -150,28 +154,28 @@ def cloudfare_test(IP_and_port):
         elif Presence_absolute_URI == "Must" and Preference == "Absolute-URI":
             print("Pass Multiple Host headers")
         else:
-            headers = ["host: waf1.cdnattack.shop\r\n",
-                    "host: waf2.cdnattack.shop\r\n"]
+            headers = ["host: " + host_1 + "\r\n",
+                       "host: " + host_2 + "\r\n"]
             headers.extend(base_headers)
-            recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
+            recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
             recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
             if recv_status1 == "400":
                 Multiple_host_headers = "Concatenate or Reject"
                 print("Multiple Host headers: Concatenate or Reject")
             elif recv_status1 == "200":
                 recv_body1 = json.loads(recv_data1.splitlines()[-3])
-                if recv_body1["host"] == "waf2.cdnattack.shop":
+                if recv_body1["host"] == host_2:
                     Multiple_host_headers = "Prefer last"
                     print("Multiple Host headers: Prefer last")
-                elif recv_body1["host"] == "waf1.cdnattack.shop":
-                    recv_data2 = send_request(IP_and_port, "http://waf2.cdnattack.shop/style.css", headers)
+                elif recv_body1["host"] == host_1:
+                    recv_data2 = send_request(IP_and_port, "http://" + host_2 + "/style.css", headers)
                     recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                     if recv_status2 == "200":
                         recv_body2 = json.loads(recv_data2.splitlines()[-3])
-                        if recv_body2["host"] == "waf1.cdnattack.shop":
+                        if recv_body2["host"] == host_1:
                             Multiple_host_headers = "Prefer first"
                             print("Multiple Host headers: Prefer first")
-                        elif recv_body2["host"] == "waf2.cdnattack.shop":
+                        elif recv_body2["host"] == host_2:
                             Multiple_host_headers = "Use absolute-URI"
                             print("Multiple Host headers: Use absolute-URI")
                     else:
@@ -183,18 +187,18 @@ def cloudfare_test(IP_and_port):
 
         # step5: Space-preceded Host as first header
         if Consistency == "Must":
-            headers = [" host: waf1.cdnattack.shop\r\n"]
+            headers = [" host: " + host_1 + "\r\n"]
             headers.extend(base_headers)
-            recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
+            recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
             recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
             if recv_status1 == "200":
                 Space_preceded_host_as_first_header = "Recognize"
                 print("Space-preceded Host as first header: Recognize")
             elif recv_status1 == "400":
-                headers = [" host: waf1.cdnattack.shop\r\n",
-                        "host: waf2.cdnattack.shopr\n"]
+                headers = [" host: " + host_1 + "\r\n",
+                        "host: " + host_2 + "\r\n"]
                 headers.extend(base_headers)
-                recv_data2 = send_request(IP_and_port, "http://waf2.cdnattack.shop/style.css", headers)
+                recv_data2 = send_request(IP_and_port, "http://" + host_2 + "/style.css", headers)
                 recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                 if recv_status2 == "200":
                     Space_preceded_host_as_first_header = "Not recognize"
@@ -210,19 +214,19 @@ def cloudfare_test(IP_and_port):
             print("Pass Space-preceded Host as first header")
         else:
             if Presence_host_header == "Must":
-                headers = [" host: waf1.cdnattack.shop\r\n"]
+                headers = [" host: " + host_1 + "\r\n"]
                 headers.extend(base_headers)
                 absolute_URI = "/style.css"
                 if Presence_absolute_URI == "Must":
-                    absolute_URI = "http://waf3.cdnattack.shop/style.css"
+                    absolute_URI = "http://" + host_3 + "/style.css"
                 recv_data1 = send_request(IP_and_port, absolute_URI, headers)
                 recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
                 if recv_status1 == "200":
                     Space_preceded_host_as_first_header = "Recognize"
                     print("Space-preceded Host as first header: Recognize")
                 elif recv_status1 == "400":
-                    headers = [" host: waf1.cdnattack.shop\r\n",
-                            "host: waf2.cdnattack.shop\r\n"]
+                    headers = [" host: " + host_1 + "\r\n",
+                            "host: " + host_2 + "\r\n"]
                     recv_data2 = send_request(IP_and_port, absolute_URI, headers)
                     recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                     if recv_status2 == "400":
@@ -236,19 +240,19 @@ def cloudfare_test(IP_and_port):
                 else:
                     print("Error: Space-preceded Host as first header: Wrong status code")
             else:
-                headers = [" host: waf1.cdnattack.shop\r\n"]
+                headers = [" host: " + host_1 + "\r\n"]
                 headers.extend(base_headers)
-                recv_data1 = send_request(IP_and_port, "http://waf2.cdnattack.shop/style.css", headers)
+                recv_data1 = send_request(IP_and_port, "http://" + host_2 + "/style.css", headers)
                 recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
                 if recv_status1 == "400":
                     Space_preceded_host_as_first_header = "Reject"
                     print("Space-preceded Host as first header: Reject")
                 elif recv_status1 == "200":
                     recv_body1 = json.loads(recv_data1.splitlines()[-3])
-                    if recv_body1["host"] == "waf1.cdnattack.shop":
+                    if recv_body1["host"] == host_1:
                         Space_preceded_host_as_first_header = "Recognize"
                         print("Space-preceded Host as first header: Recognize")
-                    elif recv_body1["host"] == "waf2.cdnattack.shop":
+                    elif recv_body1["host"] == host_2:
                         Space_preceded_host_as_first_header = "Not recognize"
                         print("Space-preceded Host as first header: Not recognize")
                     else:
@@ -259,18 +263,18 @@ def cloudfare_test(IP_and_port):
         # step6: Other space-preceded Host header
         if Consistency == "Must":
             headers = ["FH: firstheader\r\n",
-                    " host: waf1.cdnattack.shop\r\n"]
+                    " host: " + host_1 + "\r\n"]
             headers.extend(base_headers)
-            recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
+            recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
             recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
             if recv_status1 == "200":
                 Other_space_preceded_host_header = "Recognize"
                 print("Other space-preceded Host header: Recognize")
             elif recv_status1 == "400":
-                headers = ["host: waf2.cdnattack.shop\r\n",
-                        " host: waf1.cdnattack.shop\r\n"]
+                headers = ["host: " + host_2 + "\r\n",
+                        " host: " + host_1 + "\r\n"]
                 headers.extend(base_headers)
-                recv_data2 = send_request(IP_and_port, "http://waf2.cdnattack.shop/style.css", headers)
+                recv_data2 = send_request(IP_and_port, "http://" + host_2 + "/style.css", headers)
                 recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                 if recv_status2 == "200":
                     Other_space_preceded_host_header = "Not recognize"
@@ -287,19 +291,19 @@ def cloudfare_test(IP_and_port):
         else:
             if Presence_host_header == "Must":
                 headers = ["FH: firstheader\r\n",
-                        " host: waf1.cdnattack.shop\r\n"]
+                        " host: " + host_1 + "\r\n"]
                 headers.extend(base_headers)
                 absolute_URI = "/style.css"
                 if Presence_absolute_URI == "Must":
-                    absolute_URI = "http://waf3.cdnattack.shop/style.css"
+                    absolute_URI = "http://" + host_2 + "/style.css"
                 recv_data1 = send_request(IP_and_port, absolute_URI, headers)
                 recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
                 if recv_status1 == "200":
                     Other_space_preceded_host_header = "Recognize"
                     print("Other space-preceded Host header: Recognize")
                 elif recv_status1 == "400":
-                    headers = ["host: waf1.cdnattack.shop\r\n",
-                            " host: waf2.cdnattack.shop\r\n"]
+                    headers = ["host: " + host_1 + "\r\n",
+                            " host: " + host_2 + "\r\n"]
                     headers.extend(headers)
                     recv_data2 = send_request(IP_and_port, absolute_URI, headers)
                     recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
@@ -308,7 +312,7 @@ def cloudfare_test(IP_and_port):
                         print("Other space-preceded Host header: Line folding or Reject")
                     elif recv_status2 == "200":
                         recv_body2 = json.loads(recv_data2.splitlines()[-3])
-                        if recv_body2["host"] == "waf1.cdnattack.shop":
+                        if recv_body2["host"] == host_1:
                             Other_space_preceded_host_header = "Not recognize"
                             print("Other space-preceded Host header: Not recognize")
                         else:
@@ -319,28 +323,28 @@ def cloudfare_test(IP_and_port):
                     print("Error: Other space-preceded Host header: Wrong status code")
             else:
                 headers = ["FH: firstheader\r\n",
-                        " host: waf1.cdnattack.shop\r\n"]
+                        " host: " + host_1 + "\r\n"]
                 headers.extend(base_headers)
-                recv_data1 = send_request(IP_and_port, "http://waf2.cdnattack.shop/style.css", headers)
+                recv_data1 = send_request(IP_and_port, "http://" + host_2 + "/style.css", headers)
                 recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
                 if recv_status1 == "400":
                     Other_space_preceded_host_header = "Line folding or Reject"
                     print("Other space-preceded Host header: Line folding or Reject")
                 elif recv_status1 == "200":
                     recv_body1 = json.loads(recv_data1.splitlines()[-3])
-                    if recv_body1["host"] == "waf1.cdnattack.shop":
+                    if recv_body1["host"] == host_1:
                         Other_space_preceded_host_header = "Recognize"
                         print("Other space-preceded Host header: Recognize")
-                    elif recv_body1["host"] == "waf2.cdnattack.shop":
-                        headers = ["host: waf1.cdnattack.shop\r\n",
-                                " host: waf2.cdnattack.shop\r\n"]
+                    elif recv_body1["host"] == host_2:
+                        headers = ["host: " + host_1 + "\r\n",
+                                " host: " + host_2 + "\r\n"]
                         headers.extend(base_headers)
                         absolute_URI = "/style.css"
                         if Presence_absolute_URI == "Must":
-                            absolute_URI = "http://waf3.cdnattack.shop/style.css"
+                            absolute_URI = "http://" + host_3 + "/style.css"
                         recv_data2 = send_request(IP_and_port, absolute_URI, headers)
                         recv_body2 = json.loads(recv_data2.splitlines()[-3])
-                        if recv_body2["host"] == "waf1.cdnattack.shop":
+                        if recv_body2["host"] == host_1:
                             Other_space_preceded_host_header = "Not recognize"
                             print("Other space-preceded Host header: Not recognize")
                         else:
@@ -352,18 +356,18 @@ def cloudfare_test(IP_and_port):
 
         # step7: Space-succeeded Host header
         if Consistency == "Must":
-            headers = ["host: waf1.cdnattack.shop \r\n"]
+            headers = ["host: " + host_1 + " \r\n"]
             headers.extend(base_headers)
-            recv_data1 = send_request(IP_and_port, "http://waf1.cdnattack.shop/style.css", headers)
+            recv_data1 = send_request(IP_and_port, "http://" + host_1 + "/style.css", headers)
             recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
             if recv_status1 == "200":
                 Space_succeeded_host_header = "Recognize"
                 print("Space-succeeded Host header: Recognize")
             elif recv_status1 == "400":
-                headers = ["host: waf1.cdnattack.shop \r\n",
-                        "host: waf2.cdnattack.shop\r\n"]
+                headers = ["host: " + host_1 + " \r\n",
+                        "host: " + host_2 + "\r\n"]
                 headers.extend(base_headers)
-                recv_data2 = send_request(IP_and_port, "http://waf2.cdnattack.shop/style.css", headers)
+                recv_data2 = send_request(IP_and_port, "http://" + host_2 + "/style.css", headers)
                 recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                 if recv_status2 == "200":
                     Space_succeeded_host_header = "Not recognize"
@@ -379,19 +383,19 @@ def cloudfare_test(IP_and_port):
             print("Pass Space-succeeded Host header")
         else:
             if Presence_host_header == "Must":
-                headers = ["host: waf1.cdnattack.shop \r\n"]
+                headers = ["host: " + host_1 + " \r\n"]
                 headers.extend(base_headers)
                 absolute_URI = "/style.css"
                 if Presence_absolute_URI == "Must":
-                    absolute_URI = "http://waf3.cdnattack.shop/style.css"
+                    absolute_URI = "http://" + host_3 + "/style.css"
                 recv_data1 = send_request(IP_and_port, absolute_URI, headers)
                 recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
                 if recv_status1 == "200":
                     Space_succeeded_host_header = "Recognize"
                     print("Space-succeeded Host header: Recognize")
                 elif recv_status1 == "400":
-                    headers = ["host: waf1.cdnattack.shop \r\n",
-                            "host: waf2.cdnattack.shop\r\n"]
+                    headers = ["host: " + host_1 + " \r\n",
+                            "host: " + host_2 + "\r\n"]
                     recv_data2 = send_request(IP_and_port, absolute_URI, headers)
                     recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                     if recv_status2 == "400":
@@ -405,19 +409,19 @@ def cloudfare_test(IP_and_port):
                 else:
                     print("Error: Space-succeeded Host header: Wrong status code")
             else:
-                headers = ["host: waf1.cdnattack.shop \r\n"]
+                headers = ["host: " + host_1 + " \r\n"]
                 headers.extend(base_headers)
-                recv_data1 = send_request(IP_and_port, "http://waf2.cdnattack.shop/style.css", headers)
+                recv_data1 = send_request(IP_and_port, "http://" + host_2 + "/style.css", headers)
                 recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
                 if recv_status1 == "400":
                     Space_succeeded_host_header = "Reject"
                     print("Space-succeeded Host header: Reject")
                 elif recv_status1 == "200":
                     recv_body1 = json.loads(recv_data1.splitlines()[-3])
-                    if recv_body1["host"] == "waf1.cdnattack.shop":
+                    if recv_body1["host"] == host_1:
                         Space_succeeded_host_header = "Recognize"
                         print("Space-succeeded Host header: Recognize")
-                    elif recv_body1["host"] == "waf2.cdnattack.shop":
+                    elif recv_body1["host"] == host_2:
                         Space_succeeded_host_header = "Not recognize"
                         print("Space-succeeded Host header: Not recognize")
                     else:
@@ -427,24 +431,24 @@ def cloudfare_test(IP_and_port):
 
         # step8: Schema of absolute-URI
         if Consistency == "Must":
-            headers = ["host: waf1.cdnattack.shop\r\n"]
+            headers = ["host: " + host_1 + "\r\n"]
             headers.extend(base_headers)
-            recv_data1 = send_request(IP_and_port, "nonhttp://waf1.cdnattack.shop/style.css", headers)
+            recv_data1 = send_request(IP_and_port, "nonhttp://" + host_1 + "/style.css", headers)
             recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
             if recv_status1 == "200":
-                recv_data2 = send_request(IP_and_port, "nonhttp://waf2.cdnattack.shop/style.css", headers)
+                recv_data2 = send_request(IP_and_port, "nonhttp://" + host_2 + "/style.css", headers)
                 recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                 if recv_status2 == "400":
                     Schema_of_absolute_URI = "Recognize any"
                     print("Schema of absolute-URI: Recognize any")
                 elif recv_status2 == "200":
-                    recv_data3 = send_request(IP_and_port, "https://waf2.cdnattack.shop/style.css", headers)
+                    recv_data3 = send_request(IP_and_port, "https://" + host_2 + "/style.css", headers)
                     recv_status3 = recv_data3.splitlines()[0].split(" ")[1]
                     if recv_status3 == "400":
                         Schema_of_absolute_URI = "Recognize HTTP/S, not others"
                         print("Schema of absolute-URI: Recognize HTTP/S, not others")
                     elif recv_status3 == "200":
-                        recv_data4 = send_request(IP_and_port, "http://waf2.cdnattack.shop/style.css", headers)
+                        recv_data4 = send_request(IP_and_port, "http://" + host_2 + "/style.css", headers)
                         recv_status4 = recv_data4.splitlines()[0].split(" ")[1]
                         if recv_status4 == "400":
                             print("Schema of absolute-URI: Recognize HTTP, not others")
@@ -456,7 +460,7 @@ def cloudfare_test(IP_and_port):
                     print("Error: Schema of absolute-URI: Wrong status code")
             elif recv_status1 == "400":
                 if Presence_absolute_URI == "Optional":
-                    recv_data2 = send_request(IP_and_port, "https://waf1.cdnattack.shop/style.css", headers)
+                    recv_data2 = send_request(IP_and_port, "https://" + host_1 + "/style.css", headers)
                     recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                     if recv_status2 == "200":
                         Schema_of_absolute_URI = "Recognize HTTP/S, reject others"
@@ -467,7 +471,7 @@ def cloudfare_test(IP_and_port):
                     else:
                         print("Error: Schema of absolute-URI: Wrong status code")
                 else:
-                    recv_data2 = send_request(IP_and_port, "https://waf1.cdnattack.shop/style.css", headers)
+                    recv_data2 = send_request(IP_and_port, "https://" + host_1 + "/style.css", headers)
                     recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                     if recv_status2 == "200":
                         Schema_of_absolute_URI = "Recognize HTTP/S"
@@ -482,26 +486,26 @@ def cloudfare_test(IP_and_port):
         elif Presence_host_header == "Must" and Preference == "Host header":
             print("Pass Schema of absolute-URI")
         elif Presence_host_header == "Must" and Preference == "Absolute-URI":
-            headers = ["host: waf2.cdnattack.shop\r\n"]
+            headers = ["host: " + host_2 + "\r\n"]
             headers.extend(base_headers)
-            recv_data1 = send_request(IP_and_port, "https://waf1.cdnattack.shop/style.css", headers)
+            recv_data1 = send_request(IP_and_port, "https://" + host_1 + "/style.css", headers)
             recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
             if recv_status1 == "400":
                 Schema_of_absolute_URI = "Recognize HTTP, reject others"
             elif recv_status1 == "200":
                 recv_body1 = json.loads(recv_data1.splitlines()[-3])
-                if recv_body1["host"] == "waf2.cdnattack.shop":
+                if recv_body1["host"] == host_2:
                     Schema_of_absolute_URI = "Recognize HTTP/S, reject others"
-                elif recv_body1["host"] == "waf1.cdnattack.shop":
-                    recv_data2 = send_request(IP_and_port, "nonhttp://waf1.cdnattack.shop/style.css", headers)
+                elif recv_body1["host"] == host_1:
+                    recv_data2 = send_request(IP_and_port, "nonhttp://" + host_1 + "/style.css", headers)
                     recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                     if recv_status2 == "400":
                         Schema_of_absolute_URI = "Recognize HTTP/S, not others"
                     elif recv_status2 == "200":
                         recv_body2 = json.loads(recv_data2.splitlines()[-3])
-                        if recv_body2["host"] == "waf2.cdnattack.shop":
+                        if recv_body2["host"] == host_2:
                             Schema_of_absolute_URI = "Recognize HTTP/S, not others"
-                        elif recv_body2["host"] == "waf1.cdnattack.shop":
+                        elif recv_body2["host"] == host_1:
                             Schema_of_absolute_URI = "Recognize any"
                         else:
                             print("Error: Schema of absolute-URI: Unknown host")
@@ -512,12 +516,12 @@ def cloudfare_test(IP_and_port):
             else:
                 print("Error: Schema of absolute-URI: Wrong status code")
         else:
-            recv_data1 = send_request(IP_and_port, "https://waf1.cdnattack.shop/style.css", base_headers)
+            recv_data1 = send_request(IP_and_port, "https://" + host_1 + "/style.css", base_headers)
             recv_status1 = recv_data1.splitlines()[0].split(" ")[1]
             if recv_status1 == "400":
-                headers = ["host: waf1.cdnattack.shop\r\n"]
+                headers = ["host: " + host_1 + "\r\n"]
                 headers.extend(base_headers)
-                recv_data2 = send_request(IP_and_port, "https://waf1.cdnattack.shop/style.css", headers)
+                recv_data2 = send_request(IP_and_port, "https://" + host_1 + "/style.css", headers)
                 recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                 if recv_status2 == "200":
                     Schema_of_absolute_URI = "Recognize HTTP, not others"
@@ -528,15 +532,15 @@ def cloudfare_test(IP_and_port):
                 else:
                     print("Error: Schema of absolute-URI: Wrong status code")
             elif recv_status1 == "200":
-                recv_data2 = send_request(IP_and_port, "nonhttp://waf1.cdnattack.shop/style.css", base_headers)
+                recv_data2 = send_request(IP_and_port, "nonhttp://" + host_1 + "/style.css", base_headers)
                 recv_status2 = recv_data2.splitlines()[0].split(" ")[1]
                 if recv_status2 == "200":
                     Schema_of_absolute_URI = "Recognize any"
                     print("Schema of absolute-URI: Recognize any")
                 elif recv_status2 == "400":
-                    headers = ["host: waf1.cdnattack.shop\r\n"]
+                    headers = ["host: " + host_1 + "\r\n"]
                     headers.extend(base_headers)
-                    recv_data3 = send_request(IP_and_port, "nonhttp://waf1.cdnattack.shop/style.css", headers)
+                    recv_data3 = send_request(IP_and_port, "nonhttp://" + host_1 + "/style.css", headers)
                     recv_status3 = recv_data3.splitlines()[0].solit(" ")[1]
                     if recv_status3 == "200":
                         Schema_of_absolute_URI = "Recognize HTTP/S, not others"
